@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"strconv"
+)
+
 func getBoxNumber(r, c uint8) uint8 {
 	return ((r/3)*3 + c/3)
 }
@@ -8,44 +13,20 @@ func getBoxCoords(b, n uint8) Coord {
 	return Coord{b/3*3 + n/3, b%3*3 + n%3}
 }
 
-func getGridCoords(n uint8) Coord {
-	return Coord{n / 9, n % 8}
-}
-
-func getLinkedValues(knowns *Knowns, r, c uint8) *CoordSet {
+func getLinkedValues(board *Board, r, c uint8) CoordSet {
 	var b = getBoxNumber(r, c)
 	var coord = Coord{r, c}
-	var set CoordSet
+	set := make(CoordSet)
 	var n uint8
 	for ; n < 9; n++ {
-		for _, coord2 := range [3]Coord{{r, n}, {c, n}, getBoxCoords(b, n)} {
+		for _, coord2 := range [3]Coord{{r, n}, {n, c}, getBoxCoords(b, n)} {
 			r2, c2 := coord2[0], coord2[1]
-			if !knowns[r2][c2] && coord2 != coord {
+			if board.values[r2][c2] == 0 && coord2 != coord {
 				set[coord2] = true
 			}
 		}
 	}
-	return &set
-}
-
-type unknownsCoordIterator struct {
-	index  uint8
-	knowns *Knowns
-}
-
-func newUnknownsCoordIterator(knowns *Knowns) unknownsCoordIterator {
-	return unknownsCoordIterator{0, knowns}
-}
-
-func unknownsNext(iter *unknownsCoordIterator) (Coord, bool) {
-	for i := iter.index; i < 81; i++ {
-		coord := getGridCoords(iter.index)
-		if !iter.knowns[coord[0]][coord[1]] {
-			iter.index = i + 1
-			return coord, true
-		}
-	}
-	return Coord{}, false
+	return set
 }
 
 func countTrue(bools *[9]bool) uint8 {
@@ -65,4 +46,37 @@ func getOnlyValue(bools *[9]bool) uint8 {
 		}
 	}
 	return 0
+}
+
+func ValuesToString(values *Values) string {
+	var str string
+	for r := 0; r < 9; r++ {
+		for c := 0; c < 9; c++ {
+			str += strconv.Itoa(int(values[r][c])) + " "
+			if c == 2 || c == 5 {
+				str += "│ "
+			}
+		}
+		str += "\n"
+		if r == 2 || r == 5 {
+			str += "──────┼───────┼──────\n"
+		}
+	}
+	return str
+}
+
+func PrintValues(values *Values) {
+	fmt.Println("\n" + ValuesToString(values))
+}
+
+func ifRCBNContains(board *Board, r, c, b, n, v uint8) bool {
+	return (board.rowsNPossibles[r][n] == v || board.columnsNPossibles[c][n] == v || board.boxesNPossibles[b][n] == v)
+}
+
+func CopyMap[K comparable, V any](m map[K]V) map[K]V {
+	newMap := make(map[K]V)
+	for k, v := range m {
+		newMap[k] = v
+	}
+	return newMap
 }
